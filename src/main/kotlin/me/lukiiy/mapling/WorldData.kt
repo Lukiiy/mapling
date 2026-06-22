@@ -6,12 +6,6 @@ import dev.eav.tomlkt.TomlTable
 import dev.eav.tomlkt.TomlTableBuilder
 import dev.eav.tomlkt.array
 import dev.eav.tomlkt.buildTomlTable
-import dev.eav.tomlkt.getArrayOrNull
-import dev.eav.tomlkt.getBooleanOrNull
-import dev.eav.tomlkt.getFloatOrNull
-import dev.eav.tomlkt.getIntegerOrNull
-import dev.eav.tomlkt.getStringOrNull
-import dev.eav.tomlkt.getTableOrNull
 import dev.eav.tomlkt.literal
 import dev.eav.tomlkt.table
 import dev.eav.tomlkt.toBooleanOrNull
@@ -113,11 +107,7 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
                 }
             }
 
-            for ((key, section) in data.sections()) {
-                table(key) {
-                    write(section)
-                }
-            }
+            for ((key, section) in data.sections()) table(key) { write(section) }
         }
 
         write(this@WorldData)
@@ -135,24 +125,19 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
                 for ((key, value) in source) {
                     when (value) {
                         is TomlLiteral -> target.set(key, value.toValue())
-                        is TomlArray -> target.set(
-                            key,
-                            value.map {
+                        is TomlArray -> target.set(key, value.map {
                                 when (it) {
                                     is TomlLiteral -> it.toValue()
                                     else -> error("Unsupported value.")
                                 }
-                            }
-                        )
+                            })
                         is TomlTable -> read(value, target.section(key))
                         else -> error("Unsupported value.")
                     }
                 }
             }
 
-            return WorldData().also {
-                read(table, it)
-            }
+            return WorldData().also { read(table, it) }
         }
     }
 }
