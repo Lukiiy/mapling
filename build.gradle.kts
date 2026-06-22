@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.3.21"
+    id("com.gradleup.shadow") version "8.3.1"
 }
 
 group = "me.lukiiy"
@@ -7,12 +8,22 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-
-    maven("https://oss.sonatype.org/content/repositories/snapshots/")
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
+}
+
+tasks {
+    shadowJar {
+        archiveClassifier.set("")
+        mergeServiceFiles()
+        minimize()
+    }
+
+    build {
+        dependsOn(shadowJar)
+    }
 }
 
 java {
