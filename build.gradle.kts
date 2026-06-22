@@ -12,6 +12,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
+    implementation("dev.eav.tomlkt:tomlkt:0.6.0")
 }
 
 tasks {
