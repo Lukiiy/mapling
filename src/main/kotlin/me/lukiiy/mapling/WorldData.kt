@@ -1,5 +1,23 @@
 package me.lukiiy.mapling
 
+import dev.eav.tomlkt.TomlArray
+import dev.eav.tomlkt.TomlLiteral
+import dev.eav.tomlkt.TomlTable
+import dev.eav.tomlkt.TomlTableBuilder
+import dev.eav.tomlkt.array
+import dev.eav.tomlkt.buildTomlTable
+import dev.eav.tomlkt.getArrayOrNull
+import dev.eav.tomlkt.getBooleanOrNull
+import dev.eav.tomlkt.getFloatOrNull
+import dev.eav.tomlkt.getIntegerOrNull
+import dev.eav.tomlkt.getStringOrNull
+import dev.eav.tomlkt.getTableOrNull
+import dev.eav.tomlkt.literal
+import dev.eav.tomlkt.table
+import dev.eav.tomlkt.toBooleanOrNull
+import dev.eav.tomlkt.toDoubleOrNull
+import dev.eav.tomlkt.toLongOrNull
+
 class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), private val sections: MutableMap<String, WorldData> = linkedMapOf()) {
     fun set(key: String, value: Any): WorldData {
         values[key] = normalize(value)
@@ -67,4 +85,74 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
     fun sectionKeys(): Set<String> = sections.keys
     fun values(): Map<String, Any?> = values.toMap()
     fun sections(): Map<String, WorldData> = sections.toMap()
+
+    // Toml
+    // TODO: OH MY. OH MY. HOW DO I NOT BREAK THIS?
+    fun toToml(): TomlTable = buildTomlTable {
+        fun TomlTableBuilder.write(data: WorldData) {
+            for ((key, value) in data.values()) {
+                when (value) {
+                    is String -> literal(key, value)
+                    is Boolean -> literal(key, value)
+                    is Long -> literal(key, value)
+                    is Double -> literal(key, value)
+                    is Position -> literal(key, value.serialize())
+                    is List<*> -> array(key) {
+                        for (item in value) {
+                            when (item) {
+                                is String -> literal(item)
+                                is Boolean -> literal(item)
+                                is Long -> literal(item)
+                                is Double -> literal(item)
+                                is Position -> literal(item.serialize())
+                                else -> error("Unsupported value.")
+                            }
+                        }
+                    }
+                    else -> error("Unsupported value.")
+                }
+            }
+
+            for ((key, section) in data.sections()) {
+                table(key) {
+                    write(section)
+                }
+            }
+        }
+
+        write(this@WorldData)
+    }
+
+    companion object {
+        fun fromToml(table: TomlTable): WorldData {
+            fun TomlLiteral.toValue(): Any {
+                val text = content
+
+                return toBooleanOrNull() ?: toLongOrNull() ?: toDoubleOrNull() ?: if (text.startsWith("pos:")) Position.deserialize(text) else text
+            }
+
+            fun read(source: TomlTable, target: WorldData) {
+                for ((key, value) in source) {
+                    when (value) {
+                        is TomlLiteral -> target.set(key, value.toValue())
+                        is TomlArray -> target.set(
+                            key,
+                            value.map {
+                                when (it) {
+                                    is TomlLiteral -> it.toValue()
+                                    else -> error("Unsupported value.")
+                                }
+                            }
+                        )
+                        is TomlTable -> read(value, target.section(key))
+                        else -> error("Unsupported value.")
+                    }
+                }
+            }
+
+            return WorldData().also {
+                read(table, it)
+            }
+        }
+    }
 }
