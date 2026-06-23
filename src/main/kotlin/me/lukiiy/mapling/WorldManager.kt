@@ -3,7 +3,7 @@ package me.lukiiy.mapling
 import me.lukiiy.mapling.provided.TomlWorldDataStore
 import java.io.File
 
-class WorldManager<W, L>(private val rootFolder: File, private val adapter: WorldAdapter<W, L>, private val dataStore: WorldDataStore = TomlWorldDataStore()) {
+class WorldManager<W>(private val rootFolder: File, private val adapter: WorldAdapter<W>, private val dataStore: WorldDataStore = TomlWorldDataStore()) {
     private val worlds: MutableMap<String, ManagedWorld<W>> = linkedMapOf()
 
     fun register(id: String): ManagedWorld<W> {
