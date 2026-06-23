@@ -70,6 +70,18 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
     fun values(): Map<String, Any> = values.toMap()
     fun sections(): Map<String, WorldData> = sections.toMap()
 
+    // Areas
+    fun setArea(name: String, from: Position, to: Position): WorldData {
+        section(name).set("from", from).set("to", to)
+        return this
+    }
+
+    fun getArea(name: String): Pair<Position, Position>? {
+        val section = getSection(name) ?: return null
+
+        return Pair(section.get<Position>("from") ?: return null, section.get<Position>("to") ?: return null)
+    }
+
     // Toml
 
     fun toToml(): TomlTable {
