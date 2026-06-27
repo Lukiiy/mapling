@@ -7,7 +7,11 @@ import me.lukiiy.mapling.WorldDataStore
 import java.io.File
 
 class TomlWorldDataStore : WorldDataStore {
-    override fun load(file: File): WorldData = WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
+    override fun load(file: File): WorldData {
+        if (!file.exists()) return WorldData()
+
+        WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
+    }
 
     override fun save(file: File, data: WorldData) {
         if (data.isEmpty()) return
