@@ -117,4 +117,6 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
             return WorldData().also { read(table, it) }
         }
     }
+
+    fun isEmpty(): Boolean = values().isEmpty() && sections().isEmpty()
 }
