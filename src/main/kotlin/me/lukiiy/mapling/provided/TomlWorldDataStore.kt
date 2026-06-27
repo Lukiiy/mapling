@@ -8,5 +8,9 @@ import java.io.File
 
 class TomlWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData = WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
-    override fun save(file: File, data: WorldData) = file.writeText(Toml.encodeToString(data.toToml()))
+
+    override fun save(file: File, data: WorldData) {
+        file.parentFile?.mkdirs()
+        file.writeText(Toml.encodeToString(data.toToml()))
+    }
 }
