@@ -10,6 +10,8 @@ class TomlWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData = WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
 
     override fun save(file: File, data: WorldData) {
+        if (data.isEmpty()) return
+
         file.parentFile?.mkdirs()
         file.writeText(Toml.encodeToString(data.toToml()))
     }
