@@ -10,7 +10,7 @@ class TomlWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData {
         if (!file.exists()) return WorldData()
 
-        WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
+        return WorldData.fromToml(Toml.parseToTomlTable(file.readText()))
     }
 
     override fun save(file: File, data: WorldData) {
