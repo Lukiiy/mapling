@@ -4,6 +4,7 @@ plugins {
 }
 
 group = "me.lukiiy"
+description = "Minigame map/arena library to hold & store data."
 version = "1.0-SNAPSHOT"
 
 repositories {
