@@ -59,7 +59,7 @@ class JsonWorldDataStore : WorldDataStore {
             }
 
             is JsonArray -> element.map(::decode)
-            else -> error("Unsupported value.")
+            else -> error(WorldDataStore.INCOMPATIBLE)
         }
 
         fun read(obj: JsonObject, target: WorldData) {

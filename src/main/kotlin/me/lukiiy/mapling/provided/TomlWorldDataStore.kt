@@ -49,7 +49,7 @@ class TomlWorldDataStore : WorldDataStore {
             is TomlLiteral -> element.toBooleanOrNull() ?: element.toLongOrNull() ?: element.toDoubleOrNull() ?: element.content.takeIf { it.startsWith("pos:") }?.let(Position::deserialize) ?: element.content
             is TomlArray -> element.map(::decode)
 
-            else -> error("Unsupported value.")
+            else -> error(WorldDataStore.INCOMPATIBLE)
         }
 
         fun read(table: TomlTable, target: WorldData) {
