@@ -1,7 +1,9 @@
 package me.lukiiy.mapling
 
-class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), private val sections: MutableMap<String, WorldData> = linkedMapOf()) {
+class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), private val sections: MutableMap<String, WorldData> = linkedMapOf(), private val positions: MutableMap<String, Position> = linkedMapOf(), private val areas: MutableMap<String, Pair<Position, Position>> = linkedMapOf()) {
     fun set(key: String, value: Any): WorldData {
+        if (value is Position) return setPosition(key, value)
+
         values[key] = normalize(value)
         return this
     }
@@ -18,7 +20,7 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
             is String -> value
             is Position -> value
             is List<*> -> value.map {
-                requireNotNull(it) { "Null values are not supported in Mapling lists." }
+                requireNotNull(it) { "Null not supported!" }
 
                 normalize(it)
             }
@@ -53,26 +55,37 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
     fun clear() {
         values.clear()
         sections.clear()
+        positions.clear()
+        areas.clear()
     }
 
-    fun contains(key: String): Boolean = values.containsKey(key) || sections.containsKey(key)
+    fun contains(key: String): Boolean = values.containsKey(key) || sections.containsKey(key) || positions.containsKey(key) || areas.containsKey(key)
 
     fun keys(): Set<String> = values.keys
     fun sectionKeys(): Set<String> = sections.keys
+    fun positionKeys(): Set<String> = positions.keys
+    fun areaKeys(): Set<String> = areas.keys
+
     fun values(): Map<String, Any> = values.toMap()
     fun sections(): Map<String, WorldData> = sections.toMap()
+    fun positionValues(): Map<String, Position> = positions.toMap()
+    fun areaValues(): Map<String, Pair<Position, Position>> = areas.toMap()
 
-    // Areas
-    fun setArea(name: String, from: Position, to: Position): WorldData {
-        section(name).set("from", from).set("to", to)
+    // Positions
+    fun setPosition(key: String, pos: Position): WorldData {
+        positions[key] = pos
         return this
     }
 
-    fun getArea(name: String): Pair<Position, Position>? {
-        val section = getSection(name) ?: return null
+    fun getPosition(key: String): Position? = positions[key]
 
-        return Pair(section.get<Position>("from") ?: return null, section.get<Position>("to") ?: return null)
+    // Areas (Position pairs)
+    fun setArea(name: String, from: Position, to: Position): WorldData {
+        areas[name] = from to to
+        return this
     }
 
-    fun isEmpty(): Boolean = values().isEmpty() && sections().isEmpty()
+    fun getArea(name: String): Pair<Position, Position>? = areas[name]
+
+    fun isEmpty(): Boolean = values.isEmpty() && sections.isEmpty() && positions.isEmpty() && areas.isEmpty()
 }
