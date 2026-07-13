@@ -1,5 +1,8 @@
 package me.lukiiy.mapling
 
+/**
+ * Data holder for a [ManagedWorld]. Can hold positions, areas and cusotm values.
+ */
 class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), private val sections: MutableMap<String, WorldData> = linkedMapOf(), private val positions: MutableMap<String, Position> = linkedMapOf(), private val areas: MutableMap<String, Pair<Position, Position>> = linkedMapOf()) {
     fun set(key: String, value: Any): WorldData {
         if (value is Position) return setPosition(key, value)
@@ -29,6 +32,12 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
         }
     }
 
+    /**
+     * Gets or creates a nested [WorldData] section, serving as sort of a group.
+     *
+     * @param name Dot-separated path, (like "spawns.overworld")
+     * @return The section at that path (created if absent)
+     */
     fun section(name: String): WorldData {
         val parts = name.split('.').filter { it.isNotBlank() }
         var current = this
@@ -38,6 +47,12 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
         return current
     }
 
+    /**
+     * Gets the nested [WorldData] section at the given dot-separated path, if it exists. Does not create missing sections.
+     *
+     * @param name Dot-separated path, (like "spawns.overworld")
+     * @return The section at that path, or `null` if any part of the path doesn't exist
+     */
     fun getSection(name: String): WorldData? {
         val parts = name.split('.').filter { it.isNotBlank() }
         var current: WorldData = this
