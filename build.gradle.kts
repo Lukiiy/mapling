@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.3.21"
     id("com.gradleup.shadow") version "8.3.1"
+    kotlin("plugin.serialization") version "2.3.21"
 }
 
 group = "me.lukiiy"
@@ -14,6 +15,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("dev.eav.tomlkt:tomlkt:0.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
 
 tasks {
