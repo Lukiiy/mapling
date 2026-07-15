@@ -13,54 +13,80 @@ import me.lukiiy.mapling.Position
 import me.lukiiy.mapling.WorldData
 import me.lukiiy.mapling.WorldDataStore
 import java.io.File
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.map
 
 class TomlWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData {
         if (!file.exists()) return WorldData()
 
-        return deserialize(Toml.parseToTomlTable(file.readText()))
+        val root = Toml.parseToTomlTable(file.readText())
+        val data = WorldData()
+
+        // parsings & gathering!
+        (root["values"] as? TomlTable)?.forEach { (k, v) -> data.set(k, decode(v)) }
+        (root["positions"] as? TomlTable)?.forEach { (k, v) -> data.setPosition(k, Position.deserialize((v as TomlLiteral).content)) }
+
+        (root["areas"] as? TomlTable)?.forEach { (k, v) ->
+            val value = v as TomlTable
+
+            data.setArea(k, Position.deserialize((value["from"] as TomlLiteral).content), Position.deserialize((value["to"] as TomlLiteral).content))
+        }
+
+        (root["groups"] as? TomlTable)?.forEach { (k, v) ->
+            val list = data.group(k)
+
+            (v as TomlArray).forEach { list.add(Position.deserialize((it as TomlLiteral).content)) }
+        }
+
+        return data
     }
 
     override fun save(file: File, data: WorldData) {
         if (data.isEmpty()) return
 
         file.parentFile?.mkdirs()
-        file.writeText(Toml.encodeToString(serialize(data)))
-    }
 
-    private fun serialize(data: WorldData): TomlTable {
-        fun encode(value: Any): Any = when (value) {
-            is Position -> value.serialize()
-            is List<*> -> value.map {
-                encode(requireNotNull(it))
+        val root = buildMap<String, TomlElement> {
+            data.values().takeIf { it.isNotEmpty() }?.let {
+                put("values", TomlTable(it.mapValues { (_, v) -> encode(v) }))
             }
 
-            else -> value
-        }
+            data.positionValues().takeIf { it.isNotEmpty() }?.let {
+                put("positions", TomlTable(it.mapValues { (_, p) -> TomlLiteral(p.serialize()) }))
+            }
 
-        return TomlTable(buildMap {
-            for ((key, value) in data.values()) put(key, encode(value))
-            for ((key, section) in data.sections()) put(key, serialize(section))
-        })
-    }
+            data.areaValues().takeIf { it.isNotEmpty() }?.let { areas ->
+                put("areas", TomlTable(areas.mapValues { (_, a) ->
+                    TomlTable(mapOf("from" to TomlLiteral(a.first.serialize()), "to" to TomlLiteral(a.second.serialize())))
+                }))
+            }
 
-    private fun deserialize(table: TomlTable): WorldData {
-        fun decode(element: TomlElement): Any = when (element) {
-            is TomlLiteral -> element.toBooleanOrNull() ?: element.toLongOrNull() ?: element.toDoubleOrNull() ?: element.content.takeIf { it.startsWith("pos:") }?.let(Position::deserialize) ?: element.content
-            is TomlArray -> element.map(::decode)
-
-            else -> error(WorldDataStore.INCOMPATIBLE)
-        }
-
-        fun read(table: TomlTable, target: WorldData) {
-            for ((key, element) in table) {
-                when (element) {
-                    is TomlTable -> read(element, target.section(key))
-                    else -> target.set(key, decode(element))
-                }
+            data.groups().filterValues { it.isNotEmpty() }.takeIf { it.isNotEmpty() }?.let { groups ->
+                put("groups", TomlTable(groups.mapValues { (_, list) ->
+                    TomlArray(list.map { TomlLiteral(it.serialize()) })
+                }))
             }
         }
 
-        return WorldData().also { read(table, it) }
+        file.writeText(Toml.encodeToString(TomlTable(root)))
+    }
+
+    private fun encode(value: Any): TomlElement = when (value) {
+        is Boolean -> TomlLiteral(value)
+        is Long -> TomlLiteral(value)
+        is Double -> TomlLiteral(value)
+        is String -> TomlLiteral(value)
+        is List<*> -> TomlArray(value.map { encode(requireNotNull(it)) })
+        else -> error(WorldDataStore.INCOMPATIBLE)
+    }
+
+    private fun decode(element: TomlElement): Any = when (element) {
+        is TomlLiteral -> element.toBooleanOrNull() ?: element.toLongOrNull() ?: element.toDoubleOrNull() ?: element.content
+
+        is TomlArray -> element.map(::decode)
+
+        else -> error(WorldDataStore.INCOMPATIBLE)
     }
 }

@@ -15,62 +15,82 @@ import me.lukiiy.mapling.WorldDataStore
 import java.io.File
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.iterator
 import kotlin.collections.map
 
 class JsonWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData {
         if (!file.exists()) return WorldData()
 
-        return deserialize(Json.parseToJsonElement(file.readText()).jsonObject)
+        val root = Json.parseToJsonElement(file.readText()).jsonObject
+        val data = WorldData()
+
+        // parsings & gathering!
+        (root["values"] as? JsonObject)?.forEach { (k, v) -> data.set(k, decode(v)) }
+        (root["positions"] as? JsonObject)?.forEach { (k, v) -> data.setPosition(k, Position.deserialize((v as JsonPrimitive).content)) }
+
+        (root["areas"] as? JsonObject)?.forEach { (k, v) ->
+            val value = v as JsonObject
+
+            data.setArea(k, Position.deserialize((value["from"] as JsonPrimitive).content), Position.deserialize((value["to"] as JsonPrimitive).content))
+        }
+
+        (root["groups"] as? JsonObject)?.forEach { (k, v) ->
+            val list = data.group(k)
+
+            (v as JsonArray).forEach { list.add(Position.deserialize((it as JsonPrimitive).content)) }
+        }
+
+        return data
     }
 
     override fun save(file: File, data: WorldData) {
         if (data.isEmpty()) return
 
         file.parentFile?.mkdirs()
-        file.writeText(Json.encodeToString(JsonObject.serializer(), serialize(data)))
-    }
 
-    private fun serialize(data: WorldData): JsonObject {
-        fun encode(value: Any): JsonElement = when (value) {
-            is Position -> JsonPrimitive(value.serialize())
-            is Boolean -> JsonPrimitive(value)
-            is Long -> JsonPrimitive(value)
-            is Int -> JsonPrimitive(value)
-            is Double -> JsonPrimitive(value)
-            is String -> JsonPrimitive(value)
-            is List<*> -> JsonArray(value.map { encode(requireNotNull(it)) })
-            else -> error("Unsupported value.")
-        }
-
-        return JsonObject(buildMap {
-            for ((key, value) in data.values()) put(key, encode(value))
-            for ((key, section) in data.sections()) put(key, serialize(section))
-        })
-    }
-
-    private fun deserialize(obj: JsonObject): WorldData {
-        fun decode(element: JsonElement): Any = when (element) {
-            is JsonPrimitive -> when {
-                element.content.startsWith("pos:") -> Position.deserialize(element.content)
-                !element.isString -> element.booleanOrNull ?: element.longOrNull ?: element.doubleOrNull ?: element.content
-                else -> element.content
+        val root = buildMap<String, JsonElement> {
+            data.values().takeIf { it.isNotEmpty() }?.let {
+                put("values", JsonObject(it.mapValues { (_, v) -> encode(v) }))
             }
 
-            is JsonArray -> element.map(::decode)
-            else -> error(WorldDataStore.INCOMPATIBLE)
-        }
+            data.positionValues().takeIf { it.isNotEmpty() }?.let {
+                put("positions", JsonObject(it.mapValues { (_, p) -> JsonPrimitive(p.serialize()) }))
+            }
 
-        fun read(obj: JsonObject, target: WorldData) {
-            for ((key, element) in obj) {
-                when (element) {
-                    is JsonObject -> read(element, target.section(key))
-                    else -> target.set(key, decode(element))
-                }
+            data.areaValues().takeIf { it.isNotEmpty() }?.let { areas ->
+                put("areas", JsonObject(areas.mapValues { (_, a) ->
+                    JsonObject(mapOf("from" to JsonPrimitive(a.first.serialize()), "to" to JsonPrimitive(a.second.serialize())))
+                }))
+            }
+
+            data.groups().filterValues { it.isNotEmpty() }.takeIf { it.isNotEmpty() }?.let { groups ->
+                put("groups", JsonObject(groups.mapValues { (_, list) ->
+                    JsonArray(list.map { JsonPrimitive(it.serialize()) })
+                }))
             }
         }
 
-        return WorldData().also { read(obj, it) }
+        file.writeText(Json.encodeToString(JsonObject.serializer(), JsonObject(root)))
+    }
+
+    private fun encode(value: Any): JsonElement = when (value) {
+        is Boolean -> JsonPrimitive(value)
+        is Long -> JsonPrimitive(value)
+        is Double -> JsonPrimitive(value)
+        is String -> JsonPrimitive(value)
+        is List<*> -> JsonArray(value.map { encode(requireNotNull(it)) })
+        else -> error(WorldDataStore.INCOMPATIBLE)
+    }
+
+    private fun decode(element: JsonElement): Any = when (element) {
+        is JsonPrimitive -> when {
+            !element.isString -> element.booleanOrNull ?: element.longOrNull ?: element.doubleOrNull ?: element.content
+
+            else -> element.content
+        }
+
+        is JsonArray -> element.map(::decode)
+
+        else -> error(WorldDataStore.INCOMPATIBLE)
     }
 }
