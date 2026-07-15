@@ -45,7 +45,17 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String): T? = values[key] as? T
 
+    /** Removes the plain value key [key]. Returns the removed value, or null if absent. */
     fun remove(key: String): Any? = values.remove(key)
+
+    /** Removes the position named [key]. Returns true if such existed. */
+    fun removePosition(key: String): Boolean = positions.remove(key) != null
+
+    /** Removes the area named [key]. Returns true if such existed. */
+    fun removeArea(key: String): Boolean = areas.remove(key) != null
+
+    /** Removes the group named [key] entirely. Returns true if such existed. */
+    fun removeGroup(key: String): Boolean = groups.remove(key) != null
 
     fun clear() {
         values.clear()
