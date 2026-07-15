@@ -39,9 +39,7 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
      */
     fun group(name: String): MutableList<Position> = groups.getOrPut(name) { mutableListOf() }
 
-    /**
-     * A snapshot of all available groups, keyed by name!
-     */
+    /** A snapshot of all available groups, keyed by name! */
     fun groups(): Map<String, List<Position>> = groups.mapValues { it.value.toList() }
 
     @Suppress("UNCHECKED_CAST")
@@ -56,7 +54,17 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
         groups.clear()
     }
 
-    fun contains(key: String): Boolean = values.containsKey(key) || positions.containsKey(key) || areas.containsKey(key) || groups.containsKey(key)
+    /** True if a plain value named "[key]" exists. */
+    fun hasValue(key: String): Boolean = values.containsKey(key)
+
+    /** True if a position named "[key]" exists. */
+    fun hasPosition(key: String): Boolean = positions.containsKey(key)
+
+    /** True if an area named "[key]" exists. */
+    fun hasArea(key: String): Boolean = areas.containsKey(key)
+
+    /** True if a group named "[key]" exists. */
+    fun hasGroup(key: String): Boolean = groups.containsKey(key)
 
     fun keys(): Set<String> = values.keys
     fun groupKeys(): Set<String> = groups.keys
