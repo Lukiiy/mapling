@@ -17,6 +17,7 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.map
 
+// Default!
 class TomlWorldDataStore : WorldDataStore {
     override fun load(file: File): WorldData {
         if (!file.exists()) return WorldData()
