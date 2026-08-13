@@ -88,6 +88,7 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
     // Positions
     fun setPosition(key: String, pos: Position): WorldData {
         positions[key] = pos
+
         return this
     }
 
@@ -95,7 +96,8 @@ class WorldData(private val values: MutableMap<String, Any> = linkedMapOf(), pri
 
     // Areas (Position pairs)
     fun setArea(name: String, from: Position, to: Position): WorldData {
-        areas[name] = from to to
+        areas[name] = from.toSimplifiedPos() to to.toSimplifiedPos()
+
         return this
     }
 
