@@ -13,4 +13,7 @@ data class Position(val x: Double, val y: Double, val z: Double, val yaw: Float 
             return Position(parts[0].toDouble(), parts[1].toDouble(), parts[2].toDouble(), parts[3].toFloat(), parts[4].toFloat())
         }
     }
+
+    /** normalizes a Position to a non-Double position */
+    fun toSimplifiedPos(): Position = Position(x.toInt().toDouble(), y.toInt().toDouble(), z.toInt().toDouble())
 }
