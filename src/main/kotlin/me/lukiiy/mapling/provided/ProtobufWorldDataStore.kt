@@ -24,10 +24,10 @@ class ProtobufWorldDataStore : WorldDataStore {
     data class ProtoPosition(val x: Double, val y: Double, val z: Double, val yaw: Float = 0f, val pitch: Float = 0f)
 
     @Serializable
-    data class ProtoVec3(val x: Double, val y: Double, val z: Double)
+    data class ProtoSimplePos(val x: Int, val y: Int, val z: Int)
 
     @Serializable
-    data class ProtoArea(val from: ProtoVec3, val to: ProtoVec3)
+    data class ProtoArea(val from: ProtoSimplePos, val to: ProtoSimplePos)
 
     @Serializable
     data class WorldDataProto(val values: Map<String, BufValue> = emptyMap(), val positions: Map<String, ProtoPosition> = emptyMap(), val areas: Map<String, ProtoArea> = emptyMap(), val groups: Map<String, List<ProtoPosition>> = emptyMap())
@@ -40,7 +40,7 @@ class ProtobufWorldDataStore : WorldDataStore {
 
         proto.values.forEach { (k, v) -> data.set(k, decode(v)) }
         proto.positions.forEach { (k, p) -> data.setPosition(k, Position(p.x, p.y, p.z, p.yaw, p.pitch)) }
-        proto.areas.forEach { (k, a) -> data.setArea(k, Position(a.from.x, a.from.y, a.from.z), Position(a.to.x, a.to.y, a.to.z)) }
+        proto.areas.forEach { (k, a) -> data.setArea(k, Position(a.from.x.toDouble(), a.from.y.toDouble(), a.from.z.toDouble()), Position(a.to.x.toDouble(), a.to.y.toDouble(), a.to.z.toDouble())) }
         proto.groups.forEach { (k, list) -> list.forEach { p -> data.group(k).add(Position(p.x, p.y, p.z, p.yaw, p.pitch)) } }
 
         return data
@@ -54,9 +54,7 @@ class ProtobufWorldDataStore : WorldDataStore {
         val proto = WorldDataProto(
             values = data.values().mapValues { (_, v) -> encode(v) },
             positions = data.positionValues().mapValues { (_, p) -> ProtoPosition(p.x, p.y, p.z, p.yaw, p.pitch) },
-
-            areas = data.areaValues().mapValues { (_, a) -> ProtoArea(ProtoVec3(a.first.x, a.first.y, a.first.z), ProtoVec3(a.second.x, a.second.y, a.second.z)) },
-
+            areas = data.areaValues().mapValues { (_, a) -> ProtoArea(ProtoSimplePos(a.first.x.toInt(), a.first.y.toInt(), a.first.z.toInt()), ProtoSimplePos(a.second.x.toInt(), a.second.y.toInt(), a.second.z.toInt())) },
             groups = data.groups().filterValues { it.isNotEmpty() }
                 .mapValues { (_, list) ->
                     list.map { p -> ProtoPosition(p.x, p.y, p.z, p.yaw, p.pitch) }
