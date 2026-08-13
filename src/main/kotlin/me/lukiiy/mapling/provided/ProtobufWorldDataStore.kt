@@ -21,10 +21,16 @@ class ProtobufWorldDataStore : WorldDataStore {
     }
 
     @Serializable
-    data class ProtoArea(val from: String, val to: String)
+    data class ProtoPosition(val x: Double, val y: Double, val z: Double, val yaw: Float = 0f, val pitch: Float = 0f)
 
     @Serializable
-    data class WorldDataProto(val values: Map<String, BufValue> = emptyMap(), val positions: Map<String, String> = emptyMap(), val areas: Map<String, ProtoArea> = emptyMap(), val groups: Map<String, List<String>> = emptyMap())
+    data class ProtoVec3(val x: Double, val y: Double, val z: Double)
+
+    @Serializable
+    data class ProtoArea(val from: ProtoVec3, val to: ProtoVec3)
+
+    @Serializable
+    data class WorldDataProto(val values: Map<String, BufValue> = emptyMap(), val positions: Map<String, ProtoPosition> = emptyMap(), val areas: Map<String, ProtoArea> = emptyMap(), val groups: Map<String, List<ProtoPosition>> = emptyMap())
 
     override fun load(file: File): WorldData {
         if (!file.exists()) return WorldData()
@@ -33,13 +39,9 @@ class ProtobufWorldDataStore : WorldDataStore {
         val data = WorldData()
 
         proto.values.forEach { (k, v) -> data.set(k, decode(v)) }
-        proto.positions.forEach { (k, v) -> data.setPosition(k, Position.deserialize(v)) }
-        proto.areas.forEach { (k, a) -> data.setArea(k, Position.deserialize(a.from), Position.deserialize(a.to)) }
-        proto.groups.forEach { (k, list) ->
-            val group = data.group(k)
-
-            list.forEach { group.add(Position.deserialize(it)) }
-        }
+        proto.positions.forEach { (k, p) -> data.setPosition(k, Position(p.x, p.y, p.z, p.yaw, p.pitch)) }
+        proto.areas.forEach { (k, a) -> data.setArea(k, Position(a.from.x, a.from.y, a.from.z), Position(a.to.x, a.to.y, a.to.z)) }
+        proto.groups.forEach { (k, list) -> list.forEach { p -> data.group(k).add(Position(p.x, p.y, p.z, p.yaw, p.pitch)) } }
 
         return data
     }
@@ -51,9 +53,14 @@ class ProtobufWorldDataStore : WorldDataStore {
 
         val proto = WorldDataProto(
             values = data.values().mapValues { (_, v) -> encode(v) },
-            positions = data.positionValues().mapValues { (_, p) -> p.serialize() },
-            areas = data.areaValues().mapValues { (_, a) -> ProtoArea(a.first.serialize(), a.second.serialize()) },
-            groups = data.groups().filterValues { it.isNotEmpty() }.mapValues { (_, list) -> list.map { it.serialize() } }
+            positions = data.positionValues().mapValues { (_, p) -> ProtoPosition(p.x, p.y, p.z, p.yaw, p.pitch) },
+
+            areas = data.areaValues().mapValues { (_, a) -> ProtoArea(ProtoVec3(a.first.x, a.first.y, a.first.z), ProtoVec3(a.second.x, a.second.y, a.second.z)) },
+
+            groups = data.groups().filterValues { it.isNotEmpty() }
+                .mapValues { (_, list) ->
+                    list.map { p -> ProtoPosition(p.x, p.y, p.z, p.yaw, p.pitch) }
+                }
         )
 
         file.writeBytes(ProtoBuf.encodeToByteArray(WorldDataProto.serializer(), proto))
